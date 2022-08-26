@@ -74,12 +74,49 @@ XML                      4 mins              ░░░░░░░░░░░�
 
 ## Installing DKA MariaDB Module
 
-Read About [Installation Guide](https://github.com/YovanggaAnandhika/MariaDB/blob/master/INSTALL.md) On the Website
+Simple Installation
+
+with npm
+``` npm install @dkaframework/mariadb@<version>```<br/>
+with yarn install
+``` yarn add -D @dkaframework/mariadb@<version> ```
+
+
+Read More About [Installation Guide](https://github.com/YovanggaAnandhika/MariaDB/blob/master/INSTALL.md) On the Website
 Us For More Information.
 
 ## Use DKA Framework
 
-Read About [How To Use](https://github.com/YovanggaAnandhika/MariaDB/blob/master/USAGE.md) For How To Details Use.
+Simple Used Module
+
+with ESCMA SCRIPT
+```
+   import MariaDB from "@dkaframework/mariadb";
+   
+   (async () => {
+        ... another code ...
+                   
+        let instance = await new MariaDB(MariaDBConfig);
+                        ^^^^ (Extend Function Asyncnous)
+                        
+        instance.Read(tableName, Rules)
+                                  ^^^ The Options And Rules From Action Crud
+                      ^^^^^ The Table Name Database
+                 ^^^ Action For Crud Database
+                      
+            .then(async (result) => {
+                console.log(result);
+            })
+            .catch(async (error) => {
+                console.log(error);
+            });
+        
+        .. another code ...
+   })();
+    
+```
+
+Read More About [How To Use](https://github.com/YovanggaAnandhika/MariaDB/blob/master/USAGE.md) For How To Details Use.
 
 ## About Copyright
 
