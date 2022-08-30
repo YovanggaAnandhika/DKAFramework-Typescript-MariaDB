@@ -102,11 +102,11 @@ class MariaDB implements ClassInterfaces {
             this.mVal = [];
 
             await Object.keys(Rules.data).forEach((key) => {
-                this._mKey.push(` \`${key}\` `);
-                this._mVal.push(`"${ Rules.data[key]}"`);
+                this.mKey.push(` \`${key}\` `);
+                this.mVal.push(`"${ Rules.data[key]}"`);
             });
 
-            this.SqlScript = `INSERT INTO \`${TableName}\` (${this._mKey})VALUES (${this._mVal}) `;
+            this.SqlScript = `INSERT INTO \`${TableName}\` (${this.mKey})VALUES (${this.mVal}) `;
         }else if (isArray(Rules.data)){
 
             //@@@@@@@@@@@@@@@@@@@
@@ -218,7 +218,7 @@ class MariaDB implements ClassInterfaces {
      */
     async rawQuerySync(SQLString : string, values?: any): Promise<Callback |CallbackCreate | CallbackRead | CallbackError> {
         return new Promise<CallbackRead | CallbackError>(async (resolve, rejected) => {
-            switch (this._mConfig.engine) {
+            switch (this.mConfig.engine) {
                 case "Connection":
                     this.mInstance = createConnection(this.mConfig)
                     break;
@@ -314,7 +314,7 @@ class MariaDB implements ClassInterfaces {
                         })
                     break;
                 case "PoolClusterConnection" :
-                    this.mInstance = createPoolCluster(this._mConfig);
+                    this.mInstance = createPoolCluster(this.mConfig);
                     break;
                 default :
                     this.mInstance = undefined;
@@ -326,4 +326,4 @@ class MariaDB implements ClassInterfaces {
 }
 
 export default MariaDB;
-export { MariaDB }
+export { MariaDB };
