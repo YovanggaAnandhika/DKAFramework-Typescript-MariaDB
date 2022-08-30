@@ -1,6 +1,5 @@
 import {Config} from "./Config";
 import {Callback, CallbackCreate, CallbackError, CallbackRead} from "./Callback";
-import {Connection, Pool, PoolCluster} from "mariadb";
 
 
 export interface Rules {
@@ -15,6 +14,11 @@ export interface RulesRead extends Rules {
         column? : Array<string> | any,
         mode? : "ASC" | "DESC" | any
     } | any
+}
+
+export interface RulesUpdate extends Rules {
+    search? : Array<Object | String> | Object | false | any,
+    data? : Object | Array<Object | String> | false | any
 }
 
 export interface RulesCreate extends Rules {
@@ -46,6 +50,9 @@ export class ClassInterfaces {
      *  @return Promise<CallbackRead | CallbackError>
      */
     Read(TableName : string, Rules : RulesRead) : Promise<CallbackRead | CallbackError>;
+
+    Update(TableName : string, Rules : RulesUpdate) : Promise<Callback>;
+
 
     /**
      *

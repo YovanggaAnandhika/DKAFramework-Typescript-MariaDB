@@ -1,5 +1,6 @@
 import Database from "./..";
 
+    
 (async () => {
 
     await new Database({

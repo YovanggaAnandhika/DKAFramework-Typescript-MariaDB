@@ -1,11 +1,10 @@
 import {createConnection, createPool, createPoolCluster} from "mariadb";
 import GlobalConfig from "./Config";
 import {Config} from "./Interfaces/Config";
-import {isArray, isObject, merge} from "lodash";
+import {isArray, isObject, merge, extend} from "lodash";
 import {Callback, CallbackCreate, CallbackError, CallbackRead, metadata} from "./Interfaces/Callback";
-import {ClassInterfaces, Rules, RulesCreate, RulesRead} from "./Interfaces/Class";
+import {ClassInterfaces, RulesCreate, RulesRead, RulesUpdate} from "./Interfaces/Class";
 import {Instance, Method} from "./Type/types";
-
 
 /**
  * @class MariaDB
@@ -16,9 +15,44 @@ import {Instance, Method} from "./Type/types";
  */
 class MariaDB implements ClassInterfaces {
 
-    private mKey : any[] = [];
-    private mVal : any[] = [];
-    private mSetData : any[] = [];
+    private _mKey : any[] = [];
+    private _mVal : any[] = [];
+    private _mWhere : any[] = [];
+    private _mSetData : any[] = [];
+
+
+    get mKey(): any[] {
+        return this._mKey;
+    }
+
+    set mKey(value: any[]) {
+        this._mKey = value;
+    }
+
+    get mVal(): any[] {
+        return this._mVal;
+    }
+
+    set mVal(value: any[]) {
+        this._mVal = value;
+    }
+
+    get mWhere(): any[] {
+        return this._mWhere;
+    }
+
+    set mWhere(value: any[]) {
+        this._mWhere = value;
+    }
+
+    get mSetData(): any[] {
+        return this._mSetData;
+    }
+
+    set mSetData(value: any[]) {
+        this._mSetData = value;
+    }
+
     private SqlScript : string = "";
 
     private mMethod : Method = "READ";
@@ -58,6 +92,7 @@ class MariaDB implements ClassInterfaces {
      * The Return Variable Format
      */
     async Create(TableName : string, Rule : RulesCreate) : Promise<CallbackCreate | CallbackError> {
+
         let Rules : RulesCreate = merge({
             data: {}
         }, Rule);
@@ -67,11 +102,11 @@ class MariaDB implements ClassInterfaces {
             this.mVal = [];
 
             await Object.keys(Rules.data).forEach((key) => {
-                this.mKey.push(` \`${key}\` `);
-                this.mVal.push(`"${ Rules.data[key]}"`);
+                this._mKey.push(` \`${key}\` `);
+                this._mVal.push(`"${ Rules.data[key]}"`);
             });
 
-            this.SqlScript = `INSERT INTO \`${TableName}\` (${this.mKey}) VALUES (${this.mVal}) `;
+            this.SqlScript = `INSERT INTO \`${TableName}\` (${this._mKey})VALUES (${this._mVal}) `;
         }else if (isArray(Rules.data)){
 
             //@@@@@@@@@@@@@@@@@@@
@@ -93,7 +128,7 @@ class MariaDB implements ClassInterfaces {
                 this.mVal.push(`(${this.mSetData})`)
             });
             //************************************************************
-            this.SqlScript = `INSERT INTO ${TableName} (${this.mKey}) VALUES ${this.mVal} `;
+            this.SqlScript = `INSERT INTO ${TableName} (${this.mKey})VALUES ${this.mVal} `;
         }
         //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
         this.mMethod = "CREATE";
@@ -149,6 +184,33 @@ class MariaDB implements ClassInterfaces {
 
     };
 
+
+    async Update(TableName : string, Rules : RulesUpdate) : Promise<Callback> {
+
+        /** Merge JSON Extend loDash **/
+        const Rule = extend({
+            data: false,
+            search: false
+        }, Rules);
+
+        this.mKey = [];
+        this.mWhere = [];
+
+        Object.keys(Rule.data).forEach((key) => {
+            this.mKey.push(` ${key} = '${Rule.data[key]}'`);
+        });
+
+        Object.keys(Rule.search).forEach((key) => {
+            this.mWhere.push(`${key} = '${Rule.search[key]}'`);
+        });
+
+        const UpdateWhere = (Rule.search !== false) ? `WHERE ${this.mWhere}` : ``;
+
+        const mSQL = `UPDATE \`${TableName}\` SET${this.mKey} ${UpdateWhere} `;
+        this.mMethod = "UPDATE";
+        return this.rawQuerySync(mSQL, []);
+    }
+
     /**
      *
      * @param {string} SQLString
@@ -158,10 +220,10 @@ class MariaDB implements ClassInterfaces {
         return new Promise<CallbackRead | CallbackError>(async (resolve, rejected) => {
             switch (this._mConfig.engine) {
                 case "Connection":
-                    this.mInstance = createConnection(this._mConfig)
+                    this.mInstance = createConnection(this.mConfig)
                     break;
                 case "PoolConnection" :
-                    let mInstance = createPool(this._mConfig);
+                    let mInstance = createPool(this.mConfig);
                     let connection = mInstance.getConnection();
 
                     await connection
@@ -263,5 +325,5 @@ class MariaDB implements ClassInterfaces {
     }
 }
 
-export { MariaDB }
 export default MariaDB;
+export { MariaDB }
