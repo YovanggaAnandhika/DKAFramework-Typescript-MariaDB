@@ -1,4 +1,4 @@
-import Database from "./../src";
+import Database from "./..";
 
     
 (async () => {
@@ -14,13 +14,7 @@ import Database from "./../src";
         }
     });
 
-    await db.Lihat(`test`)
-        .then(async (res) => {
-            console.log(res)
-        })
-        .catch(async (error) => {
-        console.error(error)
-    })
+    db.Read()
     /*db.AutoBackup()
         .then(async (res) => {
             console.log(res)

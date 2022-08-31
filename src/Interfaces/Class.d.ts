@@ -86,6 +86,7 @@ export interface RulesInsert extends Rules {
     data? : Object | Array<Object | String> | false | any,
 }
 
+
 export class ClassInterfaces {
 
     constructor(config : Config);
@@ -97,7 +98,7 @@ export class ClassInterfaces {
      * @param Rules
      * @constructor
      * @example
-     *  <Instance>.Create(`tes`, { Rules }).then(async (res) => { ... });
+     *  <Instance>.Insert(`tes`, { Rules }).then(async (res) => { ... });
      *  @return Promise<CallbackCreate | CallbackError>
      */
     Insert(TableName : string, Rules : RulesInsert) : Promise<CallbackInsert | CallbackError>;

@@ -31,6 +31,11 @@ import path from "path";
 /**
  * @class MariaDB
  * @implements ClassInterfaces
+ * @property { CreateTable } MariaDB.CreateTable
+ * @property { Read } MariaDB.Read
+ * @property { Insert } MariaDB.Insert
+ * @property { Update } MariaDB.Update
+ * @property { Delete } MariaDB.Delete
  * @description
  * The Class Is a MariaDB Function For Database MariaDB
  * The Base In DKAFramework Application
@@ -124,7 +129,9 @@ class MariaDB implements ClassInterfaces {
         moment.locale("id")
     }
 
-
+    /**
+     * @method
+     */
     async CreateTable(TableName: string, Rules : RulesCreateTable = CreateTableConfig): Promise<CallbackCreateTable | CallbackError> {
         let mRules : RulesCreateTable = await extend(CreateTableConfig, Rules);
         this.timeStart = new Date().getTime();
@@ -170,6 +177,7 @@ class MariaDB implements ClassInterfaces {
     }
 
     /**
+     * @method
      * @name CreateTable
      */
     BuatTable = this.CreateTable;
@@ -248,6 +256,7 @@ class MariaDB implements ClassInterfaces {
      * @param {RulesRead} Rules - <b>Rules</b><br/>
      * The Rules is Parameter Options For Read <b>Database Function</b><br/>
      * ---------
+     * @memberOf MariaDB
      * @return Promise<CallbackRead | CallbackError> - <b>Promise<CallbackRead | CallbackError></b><br/>
      * The Return Variable Format
      */
