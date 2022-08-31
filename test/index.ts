@@ -14,30 +14,7 @@ import Database from "./../src";
         }
     });
 
-    db.CreateTable(`test4`,{
-        ifNotExist : true,
-        data : [
-            {
-                coloumn : "id_data",
-                type : "PRIMARY_KEY",
-                primaryKey : true,
-                autoIncrement : true
-            },
-            {
-              coloumn : "nama",
-              type : "LONGTEXT"
-            },
-            {
-                coloumn : "data",
-                type : "ENUM",
-                values : [
-                    "perempuan",
-                    "laki-laki"
-                ],
-                default : "perempuan"
-            }
-        ]
-    })
+    await db.Lihat(`test`)
         .then(async (res) => {
             console.log(res)
         })

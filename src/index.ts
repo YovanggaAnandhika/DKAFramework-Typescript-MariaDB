@@ -169,6 +169,10 @@ class MariaDB implements ClassInterfaces {
         return this.rawQuerySync(mFinalQuery,[]);
     }
 
+    /**
+     * @name CreateTable
+     */
+    BuatTable = this.CreateTable;
 
     /**
      * INFORMATION DOCUMENTATION CODE
@@ -229,6 +233,12 @@ class MariaDB implements ClassInterfaces {
     };
 
     /**
+     * @name Insert
+     */
+    Create = this.Insert;
+    Buat = this.Insert;
+
+    /**
      * INFORMATION DOCUMENTATION CODE
      * -----
      * @param { string } TableName - <b>TableName</b><br/>
@@ -277,6 +287,12 @@ class MariaDB implements ClassInterfaces {
     };
 
     /**
+     * @name Read
+     */
+    Baca = this.Read;
+    Lihat = this.Read;
+
+    /**
      * INFORMATION DOCUMENTATION CODE
      * -----
      * @param { string } TableName - <b>TableName</b><br/>
@@ -316,6 +332,12 @@ class MariaDB implements ClassInterfaces {
     }
 
     /**
+     * @name Update
+     */
+    Edit = this.Update;
+    Ubah = this.Update;
+
+    /**
      * INFORMATION DOCUMENTATION CODE
      * -----
      * @param { string } TableName - <b>TableName</b><br/>
@@ -348,6 +370,11 @@ class MariaDB implements ClassInterfaces {
         return this.rawQuerySync(SqlScript, []);
     };
 
+    /**
+     * @name Delete
+     */
+    Remove = this.Delete;
+    Hapus = this.Delete;
 
     /**
      *
@@ -666,6 +693,11 @@ class MariaDB implements ClassInterfaces {
         });
 
     }
+
+    /**
+     * @name rawQuerySync
+     */
+    Query = this.rawQuerySync;
 
     async AutoBackup(enabled : Boolean = true) : Promise<CallbackBackup> {
         return new Promise(async (resolve, rejected) => {
