@@ -4,5 +4,8 @@ export type db_createConnection = "Connection";
 export type db_createPoolConnection = "PoolConnection";
 export type db_createPoolClusterConnection = "PoolClusterConnection";
 
-export type Method = "READ" | "CREATE" | "UPDATE" | "DELETE" | undefined;
+export type TableTypeColoumn = "INT" | "BIGINT" | "LONGTEXT" | "TEXT";
+
+export type Method = "CREATE_TABLE" | "INSERT" | "READ" | "UPDATE" | "DELETE" | undefined;
+export type Priodic = "HOURS" | "DAILY" | "MONTH" | "YEARS" | undefined;
 export type Instance = Promise<Connection> | Pool | PoolCluster | undefined;

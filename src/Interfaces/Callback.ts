@@ -1,10 +1,13 @@
 
+
 export interface metadata {
     activeConnections : number,
     idleConnections : number,
     totalConnections : number,
     sqlRaw : string,
-    timeExecuteinSecond : string
+    lastInsertId? : number | undefined,
+    timeExecuteinMilliSecond : number,
+    timeExecuteinSecond : number
 }
 export interface Callback {
     status? : boolean,
@@ -13,11 +16,30 @@ export interface Callback {
     metadata? : metadata
 }
 
+export interface CallbackBackup extends Callback {
+    filename ?: string,
+    checksum ?: string | undefined
+}
+
 export interface CallbackRead extends Callback {
     data : Array<Object>
 }
 
-export interface CallbackCreate extends Callback {
+export interface CallbackUpdate extends Callback {
+    affected : number,
+    warning : number
+}
+
+export interface CallbackDelete extends Callback {
+    affected : number,
+    warning : number
+}
+
+
+export interface CallbackCreateTable extends Callback {
+    data : Array<Object>
+}
+export interface CallbackInsert extends Callback {
     data : Array<Object>
 }
 
