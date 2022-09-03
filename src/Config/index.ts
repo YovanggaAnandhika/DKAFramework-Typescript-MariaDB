@@ -1,6 +1,6 @@
 import path from "path";
-import { Config as mConfigDatabase } from "./../Interfaces/Config"
-import {RulesCreateTable} from "../Interfaces/Class";
+import { MariaDBConstructorConfig as mConfigDatabase } from "./../Interfaces/Config"
+import {RulesCreateDatabase, RulesCreateTable, RulesInsert, RulesSelect} from "../Interfaces/Class";
 
 export const DatabaseMariaDB : mConfigDatabase = {
     engine : "PoolConnection",
@@ -11,7 +11,7 @@ export const DatabaseMariaDB : mConfigDatabase = {
     database : "test",
     connectionLimit : 100,
     idleTimeout : 1000,
-    connectTimeout : 3000,
+    connectTimeout : 2000,
     autoBackup : {
         enabled : false,
         backupPriodic : "DAILY",
@@ -25,6 +25,37 @@ export const DatabaseMariaDB : mConfigDatabase = {
 export const CreateTableConfig : RulesCreateTable = {
     data : [],
     ifNotExist: false,
-    engine : "innodb"
+    engine : "innodb",
+    settings : {
+        database : true,
+        coloumn : true,
+        table : true
+    }
 };
+
+export const InsertDataConfig : RulesInsert = {
+    settings : {
+        database : true,
+        coloumn : true,
+        table : true
+    }
+}
+
+export const CreateDatabaseConfig : RulesCreateDatabase = {
+    collation : undefined,
+    ifNotExist: undefined,
+    character : undefined
+};
+
+export const SelectConfigDefault : RulesSelect = {
+    column : undefined,
+    orderBy : undefined,
+    limit : undefined,
+    settings : {
+        database : true,
+        coloumn : true,
+        table : true,
+        rows : true
+    }
+}
 export default DatabaseMariaDB;

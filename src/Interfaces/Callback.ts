@@ -21,7 +21,7 @@ export interface CallbackBackup extends Callback {
     checksum ?: string | undefined
 }
 
-export interface CallbackRead extends Callback {
+export interface CallbackSelect extends Callback {
     data : Array<Object>
 }
 
@@ -39,6 +39,11 @@ export interface CallbackDelete extends Callback {
 export interface CallbackCreateTable extends Callback {
     data : Array<Object>
 }
+
+export interface CallbackCreateDatabase extends Callback {
+
+}
+
 export interface CallbackInsert extends Callback {
     data : Array<Object>
 }

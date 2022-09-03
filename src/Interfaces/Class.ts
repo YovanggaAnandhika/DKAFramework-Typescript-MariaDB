@@ -1,26 +1,42 @@
-import {Config} from "./Config";
+import {MariaDBConstructorConfig} from "./Config";
 import {
     Callback,
-    CallbackBackup, CallbackCreateTable,
+    CallbackBackup, CallbackCreateDatabase, CallbackCreateTable,
     CallbackDelete,
     CallbackError, CallbackInsert,
-    CallbackRead,
+    CallbackSelect,
     CallbackUpdate
 } from "./Callback";
-
+import {ConfigConstructor} from "@dkaframework/encryption/dist/Interfaces/Config";
 
 export interface Rules {
-    as? : false | string
+    as? : false | string,
+    encryption ?: ConfigConstructor | undefined
 }
 
-export interface RulesRead extends Rules {
-    search? : Array<Object | String> | Object | false | any,
-    column? : Array<String> | any,
-    limit? : number | false | any,
-    orderBy? : {
-        column? : Array<string> | any,
-        mode? : "ASC" | "DESC" | any
-    } | any
+export interface RulesSelectOrderBy {
+    column : Array<string> | Array<any>,
+    mode? : "ASC" | "DESC"
+}
+
+export interface RulesSelectSearch {
+    coloumName? : string | undefined,
+    valueName? : string | undefined
+}
+
+export interface RulesSelectSettings {
+    database ?: boolean | undefined,
+    coloumn ?: boolean | undefined,
+    table ?: boolean | undefined,
+    rows ?: boolean | undefined
+}
+
+export interface RulesSelect extends Rules {
+    search? : Array<Object | String> | RulesSelectSearch | undefined,
+    column? : Array<String> | undefined,
+    limit? : number | undefined,
+    orderBy? : RulesSelectOrderBy | undefined
+    settings ?: RulesSelectSettings | undefined
 }
 
 export interface RulesUpdate extends Rules {
@@ -31,6 +47,20 @@ export interface RulesUpdate extends Rules {
 export interface RulesDelete extends Rules {
     search : Array<Object | String> | Object | false | any,
 }
+
+export interface ExtendsOptionsCreateDatabaseSettings {
+    database ?: boolean | undefined,
+    coloumn ?: boolean | undefined,
+    table ?: boolean | undefined,
+    rows ?: boolean | undefined
+}
+export interface ExtendsOptionsCreateDatabase {
+    ifNotExist ?: boolean | undefined,
+    encryption ?: ConfigConstructor | undefined,
+    settings ?: ExtendsOptionsCreateDatabaseSettings | undefined
+}
+
+export type ExtendsOptions = ExtendsOptionsCreateDatabase;
 
 
 export interface RulesCreateDataBigInt {
@@ -43,7 +73,6 @@ export interface RulesCreateDataBigInt {
 
 export type RulesCreateDataPrimary = {
     coloumn : string,
-    primaryKey : boolean,
     autoIncrement : boolean,
     type : "PRIMARY_KEY",
     default ?: null | any
@@ -76,20 +105,40 @@ export type CreateTypeColoumn =
     RulesCreateDataEnum |
     RulesCreateDataLongText;
 
+
+export interface RulesCreateTableSettings {
+    database ?: boolean | undefined,
+    coloumn ?: boolean | undefined,
+    table ?: boolean | undefined
+}
+
 export interface RulesCreateTable extends Rules {
     data : Array<CreateTypeColoumn>,
     ifNotExist ?: boolean,
-    engine ?: string
+    engine ?: string,
+    settings ?: RulesCreateTableSettings | undefined
 }
 
+export interface RulesCreateDatabase extends Rules {
+    character ?: string | undefined,
+    ifNotExist ?: boolean | undefined,
+    collation ?: string | undefined
+}
+
+export interface RulesInsertSettings {
+    database ?: boolean | undefined,
+    coloumn ?: boolean | undefined,
+    table ?: boolean | undefined
+}
 export interface RulesInsert extends Rules {
     data? : Object | Array<Object | String> | false | any,
+    settings ?: RulesInsertSettings | undefined
 }
 
 
-export class ClassInterfaces {
+export interface ClassInterfaces {
 
-    constructor(config : Config);
+    CreateDB(DatabaseName : string, Rules : RulesCreateDatabase) : Promise<CallbackCreateDatabase | CallbackError>;
 
     CreateTable(TableName : string, Rules : RulesCreateTable) : Promise<CallbackCreateTable | CallbackError>;
 
@@ -111,7 +160,7 @@ export class ClassInterfaces {
      *  <Instance>.Read(`tes`, { Rules }).then(async (res) => { ... })
      *  @return Promise<CallbackRead | CallbackError>
      */
-    Read(TableName : string, Rules : RulesRead) : Promise<CallbackRead | CallbackError>;
+    Select(TableName : string, Rules : RulesSelect) : Promise<CallbackSelect | CallbackError>;
 
     Update(TableName : string, Rules : RulesUpdate) : Promise<CallbackUpdate | CallbackError>;
 
@@ -124,11 +173,12 @@ export class ClassInterfaces {
      *
      * @param SQLString the Table Name Format As String
      * @param values
+     * @param ExtendsOptions
      * @constructor
      * @example
      *  <Instance>.rawQuerySync(`tes`, [ ... ]).then(async (res) => { ... });
      *
      *  @return Promise<CallbackCreate | CallbackRead | CallbackError>
      */
-    rawQuerySync (SQLString? : string, values? : any) : Promise<Callback | CallbackUpdate | CallbackInsert | CallbackDelete | CallbackRead | CallbackError>
+    rawQuerySync (SQLString? : string, values? : any, ExtendsOptions ?: ExtendsOptions) : Promise<Callback | CallbackCreateTable | CallbackUpdate | CallbackInsert | CallbackDelete | CallbackSelect | CallbackError>
 }
