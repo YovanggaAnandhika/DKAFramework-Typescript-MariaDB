@@ -3,7 +3,11 @@
   "version": "1.0.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "author": "Yovangga Anandhika",
+  "author": {
+    "name": "Yovangga Anandhika",
+    "email": "dhikaprivate@gmail.com",
+    "url": "github.com/yovanggaanandhika"
+  },
   "license": "MIT",
   "private": false,
   "scripts": {
