@@ -30,6 +30,7 @@ jobs:
       - uses: ferluisxd/create-npmrc@3
         with:
           org_name: dkaframework
+          auth_token: ${{ secrets.GIT_TOKEN }}
           env:
             AUTH_TOKEN: ${{ secrets.GIT_TOKEN }}
       - uses: JS-DevTools/npm-publish@v1
