@@ -381,15 +381,15 @@ class MariaDB implements ClassInterfaces {
 
         if (mRules !== undefined){
             if (isArray(mRules.search)){
-                await mRules.search.forEach((item) => {
+                await mRules.search.forEach((item : any) => {
                     if (isObject(item)){
-                        Object.keys(item).forEach((k) => {
-                            this.mSearchAdd += `\`${k}\`=\'${item?[k] : ""}\'`;
+                        let mItem : any = item;
+                        Object.keys(mItem).forEach((k) => {
+                            this.mSearchAdd += `\`${k}\`=\'${mItem[k]}\'`;
                         });
                     }else{
                         this.mSearchAdd += ` ${item} `;
                     }
-
                 });
             }else if (isObject(mRules.search)){
                 this.mSearchAdd += `\`${mRules.search.coloumName}\` = '${mRules.search.valueName}' `;

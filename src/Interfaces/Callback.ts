@@ -21,6 +21,9 @@ export interface CallbackBackup extends Callback {
     checksum ?: string | undefined
 }
 
+/**
+ * @param { Array<Object>} data
+ */
 export interface CallbackSelect extends Callback {
     data : Array<Object>
 }

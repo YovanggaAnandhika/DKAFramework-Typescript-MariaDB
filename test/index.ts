@@ -1,4 +1,4 @@
-import Database from "./../src";
+import Database from "./../src/index";
 
     
 (async () => {
@@ -6,7 +6,7 @@ import Database from "./../src";
     const db = await new Database({
         user : "root",
         password : "",
-        database : "test",
+        database : "akuntaris",
         autoBackup : {
             enabled : true,
             backupPriodic : "DAILY",
@@ -42,12 +42,12 @@ import Database from "./../src";
         console.error(error);
     });*/
 
-    db.CreateTable(`test`,{
-        data : [
-            { coloumn : "id_data", type : "PRIMARY_KEY", autoIncrement : true },
-            { coloumn : "nama", type : "LONGTEXT"}
-        ],
-        ifNotExist : true,
+    db.Select(`akuntaris-user_login`,{
+        search : [
+            { username : `tina`},
+            "AND",
+            { password : `d`}
+        ]
     })
         .then(async (res) => {
             console.log(res);

@@ -62,7 +62,6 @@ export interface ExtendsOptionsCreateDatabase {
 
 export type ExtendsOptions = ExtendsOptionsCreateDatabase;
 
-
 export interface RulesCreateDataBigInt {
     coloumn : string,
     type : "BIGINT",
