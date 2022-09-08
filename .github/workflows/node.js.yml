@@ -31,8 +31,6 @@ jobs:
         with:
           org_name: dkaframework
           auth_token: ${{ secrets.GIT_TOKEN }}
-          env:
-            AUTH_TOKEN: ${{ secrets.GIT_TOKEN }}
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_SECRET }}
