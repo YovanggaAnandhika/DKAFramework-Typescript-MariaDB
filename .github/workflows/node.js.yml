@@ -18,8 +18,17 @@ jobs:
           node-version: 17.9.0
       - run: yarn run build
 
-  publish-npm:
+  create-npmrc:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ferluisxd/create-npmrc@3
+          with:
+            org_name: dkaframework
+            auth_token: ${{ secrets.GIT_TOKEN }}
+
+  publish-npm:
+    needs: create-npmrc
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,10 +36,6 @@ jobs:
         with:
           node-version: 17.9.0
           registry-url: https://npm.pkg.github.com
-      - uses: ferluisxd/create-npmrc@3
-        with:
-          org_name: dkaframework
-          auth_token: ${{ secrets.GIT_TOKEN }}
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_SECRET }}
