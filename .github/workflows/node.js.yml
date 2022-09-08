@@ -27,6 +27,11 @@ jobs:
         with:
           node-version: 17.9.0
           registry-url: https://npm.pkg.github.com
+      - uses: ferluisxd/create-npmrc@3
+      with:
+        org_name: dkaframework
+        env:
+          AUTH_TOKEN: ${{ secrets.GIT_TOKEN }}
       - uses: JS-DevTools/npm-publish@v1
         with:
           token: ${{ secrets.NPM_SECRET }}
