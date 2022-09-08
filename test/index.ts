@@ -4,7 +4,6 @@ import Server, { Options } from "@dkaframework/server";
 (async () => {
 
     const db = await new Database({
-
         user : "root",
         password : "",
         database : "akuntaris",
@@ -36,7 +35,7 @@ import Server, { Options } from "@dkaframework/server";
         console.log(res)
     }).catch(async (error) => {
         console.error(error)
-    })
+    });
 
 
 
