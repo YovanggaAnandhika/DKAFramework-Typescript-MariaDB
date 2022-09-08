@@ -43,15 +43,10 @@ import Database from "./../src/index";
     });*/
 
     db.Select(`akuntaris-user_login`,{
-        search : [
-            { username : `tina`},
-            "AND",
-            { password : `d`}
-        ]
-    })
-        .then(async (res) => {
-            console.log(res);
-        }).catch(async (error) => {
+
+    }).then(async (res) => {
+        console.log(res);
+    }).catch(async (error) => {
         console.error(error);
     });
 

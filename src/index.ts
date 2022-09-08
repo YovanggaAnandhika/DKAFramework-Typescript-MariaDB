@@ -2,10 +2,10 @@ import {createConnection, createPool, createPoolCluster} from "mariadb";
 import GlobalConfig, {CreateDatabaseConfig, CreateTableConfig, InsertDataConfig, SelectConfigDefault} from "./Config";
 import crypto from "crypto";
 import {MariaDBConstructorConfig} from "./Interfaces/Config";
-import {isArray, isObject, merge, extend, isTypedArray} from "lodash";
+import {isArray, isObject, merge, extend, isTypedArray, result} from "lodash";
 import {
     Callback,
-    CallbackBackup,
+    CallbackBackup, CallbackCreateDatabase,
     CallbackCreateTable,
     CallbackDelete,
     CallbackError,
@@ -132,7 +132,7 @@ class MariaDB implements ClassInterfaces {
         moment.locale("id")
     }
 
-    async CreateDB(DatabaseName : string, Rules : RulesCreateDatabase = CreateDatabaseConfig) : Promise<CallbackCreateTable | CallbackError> {
+    async CreateDB(DatabaseName : string, Rules : RulesCreateDatabase = CreateDatabaseConfig) : Promise<CallbackCreateDatabase> {
         let mRules: RulesCreateDatabase = await merge(CreateDatabaseConfig,{
             encryption : this.mConfig.encryption
         }, Rules);
@@ -140,118 +140,145 @@ class MariaDB implements ClassInterfaces {
 
         let mQuery = ``;
 
-        let ifNotExists = (mRules.ifNotExist !== undefined && mRules.ifNotExist) ? `IF NOT EXISTS` : ``;
-        let characterSet = (mRules.character !== undefined) ? `CHARACTER SET ${mRules.character}` : ``;
-        let collation = (mRules.collation !== undefined) ? `COLLATE ${mRules.collation}` : ``;
-        if (mRules.encryption !== undefined){
-            if (MariaDB.checkModuleExist("@dkaframework/encryption")){
-                let mEncryption = require("@dkaframework/encryption").default;
-                let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(DatabaseName);
-                mQuery = `CREATE DATABASE ${ifNotExists} \`${mDatabase}\` ${characterSet} ${collation};`;
-                this.mMethod = "CREATE_DB";
-                return this.rawQuerySync(mQuery, [], { ifNotExist : mRules.ifNotExist});
+        return new Promise(async (resolve, rejected) => {
+            let ifNotExists = (mRules.ifNotExist !== undefined && mRules.ifNotExist) ? `IF NOT EXISTS` : ``;
+            let characterSet = (mRules.character !== undefined) ? `CHARACTER SET ${mRules.character}` : ``;
+            let collation = (mRules.collation !== undefined) ? `COLLATE ${mRules.collation}` : ``;
+            if (mRules.encryption !== undefined){
+                if (MariaDB.checkModuleExist("@dkaframework/encryption")){
+                    let mEncryption = require("@dkaframework/encryption").default;
+                    let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(DatabaseName);
+                    mQuery = `CREATE DATABASE ${ifNotExists} \`${mDatabase}\` ${characterSet} ${collation};`;
+                    this.mMethod = "CREATE_DB";
+                    await this.rawQuerySync<CallbackCreateDatabase>(mQuery, [], { ifNotExist : mRules.ifNotExist})
+                        .then(async (result) => {
+                            await resolve(result);
+                        }).catch(async (error) => {
+                            await rejected(<CallbackError>error);
+                        });
+                }else{
+                    rejected(<CallbackError>{ status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `});
+                }
             }else{
-                return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `}
+                mQuery = `CREATE DATABASE ${ifNotExists} \`${DatabaseName}\` ${characterSet} ${collation};`;
+                this.mMethod = "CREATE_DB";
+                await this.rawQuerySync<CallbackCreateDatabase>(mQuery, [], { ifNotExist : mRules.ifNotExist})
+                    .then(async (result) => {
+                        await resolve(result);
+                    }).catch(async (error) => {
+                        await rejected(<CallbackError>error);
+                    });
             }
-        }else{
-            mQuery = `CREATE DATABASE ${ifNotExists} \`${DatabaseName}\` ${characterSet} ${collation};`;
-            this.mMethod = "CREATE_DB";
-            return this.rawQuerySync(mQuery, [], { ifNotExist : mRules.ifNotExist});
-        }
-
+        });
     }
 
     /**
      * @method
      */
-    async CreateTable(TableName: string, Rules : RulesCreateTable = CreateTableConfig): Promise<CallbackCreateTable | CallbackError> {
+    async CreateTable(TableName: string, Rules : RulesCreateTable = CreateTableConfig): Promise<CallbackCreateTable> {
         let mRules : RulesCreateTable = await merge(CreateTableConfig, {
             encryption : this.mConfig.encryption
         }, Rules);
         this.timeStart = new Date().getTime();
+
         let mQuery = ``;
         let mFinalQuery = ``;
         let length : number;
         let mDefault : string;
 
-        mRules.data.forEach((value) => {
-            switch (value.type) {
-                case "PRIMARY_KEY" :
-                    let autoIncrement = (value.autoIncrement) ? "AUTO_INCREMENT" : "";
-                    if (mRules.encryption !== undefined) {
-                        if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                            let mEncryption = require("@dkaframework/encryption").default;
-                            let mColoumnName = new mEncryption(mRules.encryption).encodeIvSync(value.coloumn);
-                            let mTableNameEncrypt = (mRules.settings?.coloumn) ? mColoumnName : value.coloumn;
-                            mQuery += ` \`${mTableNameEncrypt}\` BIGINT PRIMARY KEY ${autoIncrement}`;
+        return new Promise(async (resolve, rejected) => {
+            mRules.data.forEach((value) => {
+                switch (value.type) {
+                    case "PRIMARY_KEY" :
+                        let autoIncrement = (value.autoIncrement) ? "AUTO_INCREMENT" : "";
+                        if (mRules.encryption !== undefined) {
+                            if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                                let mEncryption = require("@dkaframework/encryption").default;
+                                let mColoumnName = new mEncryption(mRules.encryption).encodeIvSync(value.coloumn);
+                                let mTableNameEncrypt = (mRules.settings?.coloumn) ? mColoumnName : value.coloumn;
+                                mQuery += ` \`${mTableNameEncrypt}\` BIGINT PRIMARY KEY ${autoIncrement}`;
+                            }else{
+                                return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                            }
                         }else{
-                            return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                            mQuery += ` \`${value.coloumn}\` BIGINT PRIMARY KEY ${autoIncrement}`;
                         }
-                    }else{
-                        mQuery += ` \`${value.coloumn}\` BIGINT PRIMARY KEY ${autoIncrement}`;
-                    }
 
-                    break;
-                case "VARCHAR" :
-                    length = (value.length !== undefined) ? value.length : 20;
-                    mDefault = (value.default === null) ? `DEFAULT NULL` : `NOT NULL`;
-                    mQuery += ` \`${value.coloumn}\` VARCHAR(${length}) ${mDefault}`;
-                    break;
-                case "LONGTEXT" :
-                    mDefault = (value.default === null) ? `DEFAULT NULL` : `NOT NULL`;
-                    if (mRules.encryption !== undefined) {
-                        if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                            let mEncryption = require("@dkaframework/encryption").default;
-                            let mColoumnName = new mEncryption(mRules.encryption).encodeIvSync(value.coloumn);
-                            let mTableNameEncrypt = (mRules.settings?.coloumn) ? mColoumnName : value.coloumn;
-                            mQuery += ` \`${mTableNameEncrypt}\` LONGTEXT ${mDefault}`;
+                        break;
+                    case "VARCHAR" :
+                        length = (value.length !== undefined) ? value.length : 20;
+                        mDefault = (value.default === null) ? `DEFAULT NULL` : `NOT NULL`;
+                        mQuery += ` \`${value.coloumn}\` VARCHAR(${length}) ${mDefault}`;
+                        break;
+                    case "LONGTEXT" :
+                        mDefault = (value.default === null) ? `DEFAULT NULL` : `NOT NULL`;
+                        if (mRules.encryption !== undefined) {
+                            if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                                let mEncryption = require("@dkaframework/encryption").default;
+                                let mColoumnName = new mEncryption(mRules.encryption).encodeIvSync(value.coloumn);
+                                let mTableNameEncrypt = (mRules.settings?.coloumn) ? mColoumnName : value.coloumn;
+                                mQuery += ` \`${mTableNameEncrypt}\` LONGTEXT ${mDefault}`;
+                            }else{
+                                return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                            }
                         }else{
-                            return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                            mQuery += ` \`${value.coloumn}\` LONGTEXT ${mDefault}`;
                         }
-                    }else{
-                        mQuery += ` \`${value.coloumn}\` LONGTEXT ${mDefault}`;
-                    }
 
-                    break;
-                case "ENUM" :
-                    mDefault = (value.default === null) ? `DEFAULT NULL` : ` DEFAULT '${value.default}'`;
-                    let ms = `'${value.values.join(`','`)}'`;
-                    mQuery += ` \`${value.coloumn}\` ENUM(${ms}) ${mDefault}`;
-                    break;
+                        break;
+                    case "ENUM" :
+                        mDefault = (value.default === null) ? `DEFAULT NULL` : ` DEFAULT '${value.default}'`;
+                        let ms = `'${value.values.join(`','`)}'`;
+                        mQuery += ` \`${value.coloumn}\` ENUM(${ms}) ${mDefault}`;
+                        break;
 
-            }
-            mQuery += `,`;
-        });
+                }
+                mQuery += `,`;
+            });
 
-        /** Remove (,) in last statment **/
-        mQuery = mQuery.substring(0, mQuery.length - 1);
+            /** Remove (,) in last statment **/
+            mQuery = mQuery.substring(0, mQuery.length - 1);
 
-        let mIfNotExist = (mRules.ifNotExist) ? "IF NOT EXISTS " : "";
-        let mEngine = (mRules.engine !== undefined) ? `ENGINE ${mRules.engine}` : ``;
+            let mIfNotExist = (mRules.ifNotExist) ? "IF NOT EXISTS " : "";
+            let mEngine = (mRules.engine !== undefined) ? `ENGINE ${mRules.engine}` : ``;
 
-        if (mRules.encryption !== undefined) {
-            if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                let mEncryption = require("@dkaframework/encryption").default;
+            if (mRules.encryption !== undefined) {
+                if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                    let mEncryption = require("@dkaframework/encryption").default;
 
-                let mTableName = new mEncryption(mRules.encryption).encodeIvSync(TableName);
-                let mTableNameEncrypt = (mRules.settings?.table) ? mTableName : TableName;
+                    let mTableName = new mEncryption(mRules.encryption).encodeIvSync(TableName);
+                    let mTableNameEncrypt = (mRules.settings?.table) ? mTableName : TableName;
 
+                    let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(this.mConfig.database);
+                    let mDatabaseEncrypt = (mRules.settings?.database) ? mDatabase : this.mConfig.database;
+                    let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
 
-                let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(this.mConfig.database);
-                let mDatabaseEncrypt = (mRules.settings?.database) ? mDatabase : this.mConfig.database;
-                let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
+                    mFinalQuery = `CREATE TABLE ${mIfNotExist}${mConvertToScript}\`${mTableNameEncrypt}\`(${mQuery}) ${mEngine};`;
+                    this.mMethod = "CREATE_TABLE";
+                    await this.rawQuerySync<CallbackCreateTable>(mFinalQuery,[], { ifNotExist : mRules.ifNotExist })
+                        .then(async (result) => {
+                            await resolve(result);
+                        }).catch(async (error) => {
+                            await rejected(<CallbackError>error);
+                        });
 
-                mFinalQuery = `CREATE TABLE ${mIfNotExist}${mConvertToScript}\`${mTableNameEncrypt}\`(${mQuery}) ${mEngine};`;
-                this.mMethod = "CREATE_TABLE";
-                return this.rawQuerySync(mFinalQuery,[], { ifNotExist : mRules.ifNotExist });
+                }else{
+                    await rejected(<CallbackError>{ status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `});
+                }
             }else{
-                return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                mFinalQuery = `CREATE TABLE ${mIfNotExist}\`${TableName}\`(${mQuery}) ${mEngine};`;
+                this.mMethod = "CREATE_TABLE";
+
+                await this.rawQuerySync<CallbackCreateTable>(mFinalQuery,[], { ifNotExist : mRules.ifNotExist })
+                    .then(async (result) => {
+                        await resolve(result);
+                    })
+                    .catch(async (error) => {
+                        await rejected(<CallbackError>error);
+                    });
+
             }
-        }else{
-            mFinalQuery = `CREATE TABLE ${mIfNotExist}\`${TableName}\`(${mQuery}) ${mEngine};`;
-            this.mMethod = "CREATE_TABLE";
-            return this.rawQuerySync(mFinalQuery,[], { ifNotExist : mRules.ifNotExist });
-        }
+        })
 
     }
 
@@ -274,81 +301,90 @@ class MariaDB implements ClassInterfaces {
      * @return Promise<CallbackCreate | CallbackError> - <b>Promise<CallbackCreate | CallbackError></b><br/>
      * The Return Variable Format
      */
-    async Insert(TableName : string, Rule : RulesInsert = InsertDataConfig) : Promise<CallbackInsert | CallbackError> {
+    async Insert(TableName : string, Rule : RulesInsert = InsertDataConfig) : Promise<CallbackInsert> {
         this.timeStart = new Date().getTime();
         let Rules : RulesInsert = merge(InsertDataConfig, {
             encryption : this.mConfig.encryption
         }, Rule);
 
-        if (isObject(Rules.data)){
-            this.mKey = [];
-            this.mVal = [];
-            /** Check Module Encryption Declaration **/
-            if (Rules.encryption !== undefined) {
-                if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                    let mEncryption = require("@dkaframework/encryption").default;
+        return new Promise(async (resolve, rejected) => {
+            if (isObject(Rules.data)){
+                this.mKey = [];
+                this.mVal = [];
+                /** Check Module Encryption Declaration **/
+                if (Rules.encryption !== undefined) {
+                    if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                        let mEncryption = require("@dkaframework/encryption").default;
 
-                    /** Refactor Table Name to Encryption **/
-                    let mTableName = new mEncryption(Rules.encryption).encodeIvSync(TableName);
-                    let mTableNameEncrypt = (Rules.settings?.table) ? mTableName : TableName;
-                    /** Refactor Database Name **/
-                    let mDatabase = new mEncryption(Rules.encryption).encodeIvSync(this.mConfig.database);
-                    let mDatabaseEncrypt = (Rules.settings?.database) ? mDatabase : this.mConfig.database;
-                    let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
+                        /** Refactor Table Name to Encryption **/
+                        let mTableName = new mEncryption(Rules.encryption).encodeIvSync(TableName);
+                        let mTableNameEncrypt = (Rules.settings?.table) ? mTableName : TableName;
+                        /** Refactor Database Name **/
+                        let mDatabase = new mEncryption(Rules.encryption).encodeIvSync(this.mConfig.database);
+                        let mDatabaseEncrypt = (Rules.settings?.database) ? mDatabase : this.mConfig.database;
+                        let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
 
-                    /** **
-                     * Looping Key And Val For Raw Script
-                     */
-                    await Object.keys(Rules.data).forEach((key) => {
-                        /** Refactor Key If Or Not Encryption **/
-                        let mKey = new mEncryption(Rules.encryption).encodeIvSync(key);
-                        let mKeyEncrypt = (Rules.settings?.coloumn) ? mKey : key;
-                        this.mKey.push(` \`${mKeyEncrypt}\` `);
-                        /** Refactor Val If Or Not Encryption **/
-                        let mVal = new mEncryption(Rules.encryption).encodeIvSync(Rules.data[key]);
-                        let mValEncrypt = (Rules.settings?.coloumn) ? mVal : Rules.data[key];
-                        this.mVal.push(`"${ mValEncrypt}"`);
-                    });
-                    /** Generate SQL Script Raw **/
-                    this.SqlScript = `INSERT INTO ${mConvertToScript}\`${mTableNameEncrypt}\` (${this.mKey})VALUES (${this.mVal}) `;
+                        /** **
+                         * Looping Key And Val For Raw Script
+                         */
+                        await Object.keys(Rules.data).forEach((key) => {
+                            /** Refactor Key If Or Not Encryption **/
+                            let mKey = new mEncryption(Rules.encryption).encodeIvSync(key);
+                            let mKeyEncrypt = (Rules.settings?.coloumn) ? mKey : key;
+                            this.mKey.push(` \`${mKeyEncrypt}\` `);
+                            /** Refactor Val If Or Not Encryption **/
+                            let mVal = new mEncryption(Rules.encryption).encodeIvSync(Rules.data[key]);
+                            let mValEncrypt = (Rules.settings?.coloumn) ? mVal : Rules.data[key];
+                            this.mVal.push(`"${ mValEncrypt}"`);
+                        });
+                        /** Generate SQL Script Raw **/
+                        this.SqlScript = `INSERT INTO ${mConvertToScript}\`${mTableNameEncrypt}\` (${this.mKey})VALUES (${this.mVal}) `;
 
+                    }else{
+                        return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                    }
                 }else{
-                    return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                    await Object.keys(Rules.data).forEach((key) => {
+                        this.mKey.push(` \`${key}\` `);
+                        this.mVal.push(`"${ Rules.data[key]}"`);
+                    });
+
+                    this.SqlScript = `INSERT INTO \`${TableName}\` (${this.mKey})VALUES (${this.mVal}) `;
                 }
-            }else{
-                await Object.keys(Rules.data).forEach((key) => {
-                    this.mKey.push(` \`${key}\` `);
-                    this.mVal.push(`"${ Rules.data[key]}"`);
-                });
-
-                this.SqlScript = `INSERT INTO \`${TableName}\` (${this.mKey})VALUES (${this.mVal}) `;
-            }
-        }else if (isArray(Rules.data)){
-            //@@@@@@@@@@@@@@@@@@@
-            this.mVal = [];
-            this.mKey = [];
-            this.mSetData = [];
-            //@@@@@@@@@@@@@@@@@@@
-
-            //**********************************************************
-            Rules.data.map(async (item, index) => {
+            }else if (isArray(Rules.data)){
+                //@@@@@@@@@@@@@@@@@@@
+                this.mVal = [];
                 this.mKey = [];
                 this.mSetData = [];
-                //######################################################
-                Object.keys(item).map(async (key) => {
-                    this.mKey.push(`${key}`);
-                    this.mSetData.push(`"${Rules.data[index][key]}"`);
+                //@@@@@@@@@@@@@@@@@@@
+
+                //**********************************************************
+                Rules.data.map(async (item, index) => {
+                    this.mKey = [];
+                    this.mSetData = [];
+                    //######################################################
+                    Object.keys(item).map(async (key) => {
+                        this.mKey.push(`${key}`);
+                        this.mSetData.push(`"${Rules.data[index][key]}"`);
+                    });
+                    //#######################################################
+                    this.mVal.push(`(${this.mSetData})`)
                 });
-                //#######################################################
-                this.mVal.push(`(${this.mSetData})`)
-            });
-            //************************************************************
-            this.SqlScript = `INSERT INTO ${TableName} (${this.mKey})VALUES ${this.mVal} `;
-        }
-        //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-        this.mMethod = "INSERT";
-        //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-        return await this.rawQuerySync(this.SqlScript,[]);
+                //************************************************************
+                this.SqlScript = `INSERT INTO ${TableName} (${this.mKey})VALUES ${this.mVal} `;
+            }
+            //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+            this.mMethod = "INSERT";
+            //$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+            await this.rawQuerySync<CallbackInsert>(this.SqlScript,[])
+                .then(async (result) => {
+                    await resolve(result);
+                })
+                .catch(async (error) => {
+                    await rejected(<CallbackError>error);
+                });
+
+        })
     };
 
     /**
@@ -371,65 +407,88 @@ class MariaDB implements ClassInterfaces {
      * @return Promise<CallbackSelect | CallbackError> - <b>Promise<CallbackSelect | CallbackError></b><br/>
      * The Return Variable Format
      */
-    async Select(TableName : string, Rules : RulesSelect = SelectConfigDefault): Promise<CallbackSelect | CallbackError> {
+    async Select(TableName : string, Rules : RulesSelect = SelectConfigDefault): Promise<CallbackSelect> {
 
         let mRules : RulesSelect = merge(SelectConfigDefault, {
             encryption : this.mConfig.encryption
         }, Rules);
+
         this.timeStart = new Date().getTime();
         this.mSearchAdd = ``;
 
-        if (mRules !== undefined){
-            if (isArray(mRules.search)){
-                await mRules.search.forEach((item : any) => {
-                    if (isObject(item)){
-                        let mItem : any = item;
-                        Object.keys(mItem).forEach((k) => {
-                            this.mSearchAdd += `\`${k}\`=\'${mItem[k]}\'`;
-                        });
+        return new Promise(async (resolve, rejected) => {
+            if (mRules !== undefined){
+                if (isArray(mRules.search)){
+                    await mRules.search.forEach((item : any) => {
+                        if (isObject(item)){
+                            let mItem : any = item;
+                            Object.keys(mItem).forEach((k) => {
+                                this.mSearchAdd += `\`${k}\`=\'${mItem[k]}\'`;
+                            });
+                        }else{
+                            this.mSearchAdd += ` ${item} `;
+                        }
+                    });
+                }else if (isObject(mRules.search)){
+                    this.mSearchAdd += `\`${mRules.search.coloumName}\` = '${mRules.search.valueName}' `;
+                }
+
+                const UpdateWhere = (mRules.search !== undefined) ? `WHERE ${this.mSearchAdd}` : ``;
+                const SelectColumn = (mRules.column !== undefined && mRules.column.length > 0 ) ? mRules.column : `*`;
+                const SelectLimit = (mRules.limit !== undefined) ? `LIMIT ${mRules.limit}` : ``;
+                const SelectOrderBy = (mRules.orderBy !== undefined && mRules.orderBy.column.length > 0) ? `ORDER BY ${mRules.orderBy.column} ${mRules.orderBy.mode}` : ``;
+                const selectParentAs = (mRules.as !== undefined && mRules.as !== false) ? ` as \`${mRules.as}\`` : ``;
+
+                if (mRules.encryption !== undefined){
+                    if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                        let mEncryption = require("@dkaframework/encryption").default;
+
+                        /** Refactor Table Name to Encryption **/
+                        let mTableName = new mEncryption(mRules.encryption).encodeIvSync(TableName);
+                        let mTableNameEncrypt = (mRules.settings?.table) ? mTableName : TableName;
+
+                        /** Refactor Database Name **/
+                        let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(this.mConfig.database);
+                        let mDatabaseEncrypt = (mRules.settings?.database) ? mDatabase : this.mConfig.database;
+                        let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
+
+                        const mSQL = `SELECT ${SelectColumn} FROM ${mConvertToScript}\`${mTableNameEncrypt}\`${selectParentAs} ${UpdateWhere} \n ${SelectOrderBy} ${SelectLimit}`;
+                        this.mMethod = "READ";
+                        await this.rawQuerySync<CallbackSelect>(mSQL,[], {encryption : mRules.encryption, settings : mRules.settings })
+                            .then(async (result) => {
+                                await resolve(result);
+                            })
+                            .catch(async (error) => {
+                                await rejected(<CallbackError>error);
+                            })
                     }else{
-                        this.mSearchAdd += ` ${item} `;
+                        await rejected(<CallbackError>{ status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `});
                     }
-                });
-            }else if (isObject(mRules.search)){
-                this.mSearchAdd += `\`${mRules.search.coloumName}\` = '${mRules.search.valueName}' `;
-            }
-
-            const UpdateWhere = (mRules.search !== undefined) ? `WHERE ${this.mSearchAdd}` : ``;
-            const SelectColumn = (mRules.column !== undefined && mRules.column.length > 0 ) ? mRules.column : `*`;
-            const SelectLimit = (mRules.limit !== undefined) ? `LIMIT ${mRules.limit}` : ``;
-            const SelectOrderBy = (mRules.orderBy !== undefined && mRules.orderBy.column.length > 0) ? `ORDER BY ${mRules.orderBy.column} ${mRules.orderBy.mode}` : ``;
-            const selectParentAs = (mRules.as !== undefined && mRules.as !== false) ? ` as \`${mRules.as}\`` : ``;
-
-            if (mRules.encryption !== undefined){
-                if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                    let mEncryption = require("@dkaframework/encryption").default;
-
-                    /** Refactor Table Name to Encryption **/
-                    let mTableName = new mEncryption(mRules.encryption).encodeIvSync(TableName);
-                    let mTableNameEncrypt = (mRules.settings?.table) ? mTableName : TableName;
-
-                    /** Refactor Database Name **/
-                    let mDatabase = new mEncryption(mRules.encryption).encodeIvSync(this.mConfig.database);
-                    let mDatabaseEncrypt = (mRules.settings?.database) ? mDatabase : this.mConfig.database;
-                    let mConvertToScript = `\`${mDatabaseEncrypt}\`.`;
-
-                    const mSQL = `SELECT ${SelectColumn} FROM ${mConvertToScript}\`${mTableNameEncrypt}\`${selectParentAs} ${UpdateWhere} \n ${SelectOrderBy} ${SelectLimit}`;
-                    this.mMethod = "READ";
-                    return await this.rawQuerySync(mSQL,[], {encryption : mRules.encryption, settings : mRules.settings } );
                 }else{
-                    return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
+                    const mSQL = `SELECT ${SelectColumn} FROM \`${TableName}\`${selectParentAs} ${UpdateWhere} \n ${SelectOrderBy} ${SelectLimit}`;
+                    this.mMethod = "READ";
+                    await this.rawQuerySync<CallbackSelect>(mSQL,[])
+                        .then(async (result) => {
+                            await resolve(result);
+                        })
+                        .catch(async (error) => {
+                            await rejected(<CallbackError>error);
+                        })
                 }
             }else{
-                const mSQL = `SELECT ${SelectColumn} FROM \`${TableName}\`${selectParentAs} ${UpdateWhere} \n ${SelectOrderBy} ${SelectLimit}`;
+                const mSQL = `SELECT * FROM \`${TableName}\` `;
                 this.mMethod = "READ";
-                return await this.rawQuerySync(mSQL,[]);
+                await this.rawQuerySync<CallbackSelect>(mSQL,[])
+                    .then(async (result) => {
+                        await resolve(result);
+                    })
+                    .catch(async (error) => {
+                        await rejected(<CallbackError>error);
+                    })
             }
-        }else{
-            const mSQL = `SELECT * FROM \`${TableName}\` `;
-            this.mMethod = "READ";
-            return await this.rawQuerySync(mSQL,[]);
-        }
+        })
+
+
 
     };
 
@@ -452,7 +511,7 @@ class MariaDB implements ClassInterfaces {
      * @return Promise<CallbackUpdate | CallbackError> - <b>Promise<CallbackUpdate | CallbackError></b><br/>
      * The Return Variable Format
      */
-    async Update(TableName : string, Rules : RulesUpdate) : Promise<CallbackUpdate | CallbackError> {
+    async Update(TableName : string, Rules : RulesUpdate) : Promise<CallbackUpdate> {
         this.timeStart = new Date().getTime();
         /** Merge JSON Extend loDash **/
         const Rule = extend({
@@ -463,19 +522,28 @@ class MariaDB implements ClassInterfaces {
         this.mKey = [];
         this.mWhere = [];
 
-        Object.keys(Rule.data).forEach((key) => {
-            this.mKey.push(` ${key} = '${Rule.data[key]}'`);
-        });
+        return new Promise(async (resolve, rejected) => {
+            Object.keys(Rule.data).forEach((key) => {
+                this.mKey.push(` ${key} = '${Rule.data[key]}'`);
+            });
 
-        Object.keys(Rule.search).forEach((key) => {
-            this.mWhere.push(`${key} = '${Rule.search[key]}'`);
-        });
+            Object.keys(Rule.search).forEach((key) => {
+                this.mWhere.push(`${key} = '${Rule.search[key]}'`);
+            });
 
-        const UpdateWhere = (Rule.search !== false) ? `WHERE ${this.mWhere}` : ``;
+            const UpdateWhere = (Rule.search !== false) ? `WHERE ${this.mWhere}` : ``;
 
-        const mSQL = `UPDATE \`${TableName}\` SET${this.mKey} ${UpdateWhere} `;
-        this.mMethod = "UPDATE";
-        return this.rawQuerySync(mSQL, []);
+            const mSQL = `UPDATE \`${TableName}\` SET${this.mKey} ${UpdateWhere} `;
+            this.mMethod = "UPDATE";
+            await this.rawQuerySync<CallbackUpdate>(mSQL, [])
+                .then(async (result) => {
+                    await resolve(result);
+                })
+                .catch(async (error) => {
+                    await rejected(<CallbackError>error);
+                })
+
+        })
     }
 
     /**
@@ -498,7 +566,7 @@ class MariaDB implements ClassInterfaces {
      * The Return Variable Format
      */
 
-    async Delete (TableName : string , Rules : RulesDelete) : Promise<CallbackDelete | CallbackError>{
+    async Delete (TableName : string , Rules : RulesDelete) : Promise<CallbackDelete>{
 
         const Rule = extend({
             search: false
@@ -506,15 +574,24 @@ class MariaDB implements ClassInterfaces {
 
         this.mWhere = [];
 
-        Object.keys(Rule.search).forEach((key) => {
-            this.mWhere.push(` \`${key}\` = "${Rule.search[key]}" `)
-        });
+        return new Promise(async (resolve, rejected) => {
+            Object.keys(Rule.search).forEach((key) => {
+                this.mWhere.push(` \`${key}\` = "${Rule.search[key]}" `)
+            });
 
-        const DeleteWhere = (Rule.search !== false) ? `WHERE ${this.mWhere}` : ``;
+            const DeleteWhere = (Rule.search !== false) ? `WHERE ${this.mWhere}` : ``;
 
-        const SqlScript = `DELETE FROM \`${TableName}\` ${DeleteWhere} `;
-        this.mMethod = "DELETE";
-        return this.rawQuerySync(SqlScript, []);
+            const SqlScript = `DELETE FROM \`${TableName}\` ${DeleteWhere} `;
+            this.mMethod = "DELETE";
+            await this.rawQuerySync<CallbackDelete>(SqlScript, [])
+                .then(async (result) => {
+                    await resolve(result)
+                })
+                .catch(async (error) => {
+                    await rejected(<CallbackError>error);
+                })
+
+        })
     };
 
     /**
@@ -529,7 +606,7 @@ class MariaDB implements ClassInterfaces {
      * @param {any}values
      * @param ExtendsOptions
      */
-    async rawQuerySync(SQLString : string, values?: any, ExtendsOptions ?: ExtendsOptions): Promise<Callback | CallbackCreateTable | CallbackUpdate | CallbackInsert | CallbackDelete | CallbackSelect | CallbackError> {
+    async rawQuerySync<T>(SQLString : string, values?: any, ExtendsOptions ?: ExtendsOptions): Promise<T> {
         return new Promise(async (resolve, rejected) => {
             switch (this.mConfig.engine) {
                 case "Connection":
@@ -562,7 +639,7 @@ class MariaDB implements ClassInterfaces {
                                                 .then(async () => {
                                                     let mIfNotExist = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
                                                     if (rows.warningStatus < 1 || mIfNotExist) {
-                                                        await resolve({
+                                                        await resolve(<T>{
                                                             status: true,
                                                             code: 200,
                                                             msg: `successful, your database has been created`,
@@ -594,7 +671,7 @@ class MariaDB implements ClassInterfaces {
                                                 .then(async () => {
                                                     let mIfNotExist = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
                                                     if (rows.warningStatus < 1 || mIfNotExist) {
-                                                        await resolve({
+                                                        await resolve(<T>{
                                                             status: true,
                                                             code: 200,
                                                             msg: `successful, your table has been created`,
@@ -627,7 +704,7 @@ class MariaDB implements ClassInterfaces {
                                                     PoolConnection.release()
                                                         .then(async () => {
                                                             metadata = merge(metadata, { lastInsertId : rows.insertId })
-                                                            await resolve({
+                                                            await resolve(<T>{
                                                                 status: true,
                                                                 code: 200,
                                                                 msg: `successful, your data has been created`,
@@ -699,7 +776,7 @@ class MariaDB implements ClassInterfaces {
                                                                     mFinalRows.push(mJSONData);
                                                                 });
 
-                                                                await resolve({
+                                                                await resolve(<T>{
                                                                     status: true,
                                                                     code: 200,
                                                                     msg: `successful, your data has been read`,
@@ -710,7 +787,7 @@ class MariaDB implements ClassInterfaces {
                                                                 return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
                                                             }
                                                         }else{
-                                                            await resolve({
+                                                            await resolve(<T>{
                                                                 status: true,
                                                                 code: 200,
                                                                 msg: `successful, your data has been read`,
@@ -751,7 +828,7 @@ class MariaDB implements ClassInterfaces {
                                         case "UPDATE" :
                                             if (rows.affectedRows > 0) {
                                                 if (rows.warningStatus < 1) {
-                                                    await resolve({
+                                                    await resolve(<T>{
                                                         status: true,
                                                         code: 200,
                                                         msg: `successful, your data has been update`,
@@ -782,7 +859,7 @@ class MariaDB implements ClassInterfaces {
                                         case "DELETE" :
                                             if (rows.affectedRows > 0) {
                                                 if (rows.warningStatus < 1) {
-                                                    await resolve({
+                                                    await resolve(<T>{
                                                         status: true,
                                                         code: 200,
                                                         msg: `successful, your data has been delete`,

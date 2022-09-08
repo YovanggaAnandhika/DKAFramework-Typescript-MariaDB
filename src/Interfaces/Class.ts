@@ -137,9 +137,9 @@ export interface RulesInsert extends Rules {
 
 export interface ClassInterfaces {
 
-    CreateDB(DatabaseName : string, Rules : RulesCreateDatabase) : Promise<CallbackCreateDatabase | CallbackError>;
+    CreateDB(DatabaseName : string, Rules : RulesCreateDatabase) : Promise<CallbackCreateDatabase>;
 
-    CreateTable(TableName : string, Rules : RulesCreateTable) : Promise<CallbackCreateTable | CallbackError>;
+    CreateTable(TableName : string, Rules : RulesCreateTable) : Promise<CallbackCreateTable>;
 
     /**
      * @param TableName the Table Name Format As String
@@ -149,7 +149,7 @@ export interface ClassInterfaces {
      *  <Instance>.Insert(`tes`, { Rules }).then(async (res) => { ... });
      *  @return Promise<CallbackCreate | CallbackError>
      */
-    Insert(TableName : string, Rules : RulesInsert) : Promise<CallbackInsert | CallbackError>;
+    Insert(TableName : string, Rules : RulesInsert) : Promise<CallbackInsert>;
     /**
      *
      * @param TableName the Table Name Format As String
@@ -159,11 +159,11 @@ export interface ClassInterfaces {
      *  <Instance>.Read(`tes`, { Rules }).then(async (res) => { ... })
      *  @return Promise<CallbackRead | CallbackError>
      */
-    Select(TableName : string, Rules : RulesSelect) : Promise<CallbackSelect | CallbackError>;
+    Select(TableName : string, Rules : RulesSelect) : Promise<CallbackSelect>;
 
-    Update(TableName : string, Rules : RulesUpdate) : Promise<CallbackUpdate | CallbackError>;
+    Update(TableName : string, Rules : RulesUpdate) : Promise<CallbackUpdate>;
 
-    Delete(TableName : string, Rules : RulesDelete) : Promise<CallbackDelete | CallbackError>;
+    Delete(TableName : string, Rules : RulesDelete) : Promise<CallbackDelete>;
 
     AutoBackup(enabled : boolean) : Promise<CallbackBackup>;
 
@@ -179,5 +179,5 @@ export interface ClassInterfaces {
      *
      *  @return Promise<CallbackCreate | CallbackRead | CallbackError>
      */
-    rawQuerySync (SQLString? : string, values? : any, ExtendsOptions ?: ExtendsOptions) : Promise<Callback | CallbackCreateTable | CallbackUpdate | CallbackInsert | CallbackDelete | CallbackSelect | CallbackError>
+    rawQuerySync<T>(SQLString? : string, values? : any, ExtendsOptions ?: ExtendsOptions) : Promise<T>
 }

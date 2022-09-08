@@ -24,7 +24,7 @@ export interface CallbackBackup extends Callback {
 /**
  * @param { Array<Object>} data
  */
-export interface CallbackSelect extends Callback {
+export interface CallbackSelect extends Callback{
     data : Array<Object>
 }
 
