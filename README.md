@@ -90,28 +90,22 @@ Us For More Information.
 Simple Used Module
 
 with ESCMA SCRIPT
-```
+```typescript
+
    import MariaDB from "@dkaframework/mariadb";
    
    (async () => {
-        ... another code ...
+        /** ... another code ... **/
                    
         let instance = await new MariaDB(MariaDBConfig);
-                        ^^^^ (Extend Function Asyncnous)
-                        
-        instance.Read(tableName, Rules)
-                                  ^^^ The Options And Rules From Action Crud
-                      ^^^^^ The Table Name Database
-                 ^^^ Action For Crud Database
-                      
+        await instance.Read(tableName, Rules)
             .then(async (result) => {
                 console.log(result);
             })
             .catch(async (error) => {
                 console.log(error);
             });
-        
-        .. another code ...
+        /** .. another code ... **/
    })();
     
 ```

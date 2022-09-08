@@ -12,7 +12,7 @@
   "private": false,
   "scripts": {
     "dev-test": "nodemon --watch src --watch test --exec ts-node test/index.ts",
-    "build": "tsc --build"
+    "build": "tsc --build --clean"
   },
   "dependencies": {
     "@dkaframework/encryption": "^1.0.1",
@@ -36,6 +36,7 @@
     "escpos": "^3.0.0-alpha.6",
     "escpos-adapter": "^3.0.0-alpha.4",
     "nodemon": "^2.0.19",
+    "rm": "^0.1.8",
     "ts-node": "^10.9.1"
   }
 }
