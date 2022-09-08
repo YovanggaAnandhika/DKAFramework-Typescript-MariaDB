@@ -10,6 +10,9 @@
   },
   "license": "MIT",
   "private": false,
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com"
+  },
   "scripts": {
     "dev-test": "nodemon --watch src --watch test --exec ts-node test/index.ts",
     "build": "tsc --build --clean"
