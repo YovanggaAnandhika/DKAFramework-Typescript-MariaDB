@@ -1,5 +1,5 @@
 import Database from "./../src/index";
-
+import Server, { Options } from "@dkaframework/server";
     
 (async () => {
 
@@ -13,6 +13,31 @@ import Database from "./../src/index";
             filename : "DKA"
         }
     });
+
+    await Server({
+        state : Options.Server.State.SERVER_STATE_DEVELOPMENT,
+        engine : Options.Server.Engine.SOCKETIO,
+        port : 82,
+        app : async (io) => {
+            let auth = io.of("auth");
+            auth.on('connection', async (io) => {
+                io.on('ping', async (data) => {
+                    db.Select(`akuntaris-user_login`,{
+                    }).then(async (res) => {
+                        console.log(res);
+                    }).catch(async (error) => {
+                        console.error(error);
+                    });
+                })
+            })
+        }
+    }).then(async (res) => {
+        console.log(res)
+    }).catch(async (error) => {
+        console.error(error)
+    })
+
+
 
     /*await db.CreateDB(`jhask`, {
         encryption : {
@@ -42,13 +67,7 @@ import Database from "./../src/index";
         console.error(error);
     });*/
 
-    db.Select(`akuntaris-user_login`,{
 
-    }).then(async (res) => {
-        console.log(res);
-    }).catch(async (error) => {
-        console.error(error);
-    });
 
 
     /*db.Insert(`test`, {

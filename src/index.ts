@@ -1,4 +1,4 @@
-import {createConnection, createPool, createPoolCluster} from "mariadb";
+import {Connection, createConnection, createPool, createPoolCluster, Pool} from "mariadb";
 import GlobalConfig, {CreateDatabaseConfig, CreateTableConfig, InsertDataConfig, SelectConfigDefault} from "./Config";
 import crypto from "crypto";
 import {MariaDBConstructorConfig} from "./Interfaces/Config";
@@ -126,10 +126,23 @@ class MariaDB implements ClassInterfaces {
     /**
      * @constructor
      * @param {Config | undefined } config
+     * @return this;
      */
     constructor(config? : MariaDBConstructorConfig) {
         this.mConfig = merge(GlobalConfig, config);
+        switch (this.mConfig.engine) {
+            case "Connection" :
+                this.mInstance = createConnection(this.mConfig);
+                break;
+            case "PoolConnection" :
+                this.mInstance = createPool(this.mConfig);
+                break;
+            case "PoolClusterConnection" :
+                this.mInstance = createPoolCluster(this.mConfig);
+                break;
+        }
         moment.locale("id")
+        return this;
     }
 
     async CreateDB(DatabaseName : string, Rules : RulesCreateDatabase = CreateDatabaseConfig) : Promise<CallbackCreateDatabase> {
@@ -610,6 +623,7 @@ class MariaDB implements ClassInterfaces {
         return new Promise(async (resolve, rejected) => {
             switch (this.mConfig.engine) {
                 case "Connection":
+                    let mInstanceConnection = await (this.mInstance as Promise<Connection>);
                     await rejected({
                         status: false,
                         code: 500,
@@ -617,17 +631,17 @@ class MariaDB implements ClassInterfaces {
                     });
                     break;
                 case "PoolConnection":
-                    let mInstance = createPool(this.mConfig);
-                    let connection = mInstance.getConnection();
-                    await connection
+                    let mInstancePool = (this.mInstance as Pool);
+                    mInstancePool.getConnection()
                         .then(async (PoolConnection) => {
+                            //Start After Get Connection
                             await PoolConnection.query(SQLString, values)
                                 .then(async (rows) => {
                                     let timeEnd = new Date().getTime();
                                     let metadata: metadata = {
-                                        activeConnections: mInstance.activeConnections(),
-                                        idleConnections: mInstance.idleConnections(),
-                                        totalConnections: mInstance.totalConnections(),
+                                        activeConnections: mInstancePool.activeConnections(),
+                                        idleConnections: mInstancePool.idleConnections(),
+                                        totalConnections: mInstancePool.totalConnections(),
                                         lastInsertId : undefined,
                                         sqlRaw: SQLString,
                                         timeExecuteinMilliSecond: Math.round(timeEnd - this.timeStart),
@@ -635,194 +649,130 @@ class MariaDB implements ClassInterfaces {
                                     }
                                     switch (this.mMethod) {
                                         case "CREATE_DB" :
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    let mIfNotExist = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
-                                                    if (rows.warningStatus < 1 || mIfNotExist) {
-                                                        await resolve(<T>{
-                                                            status: true,
-                                                            code: 200,
-                                                            msg: `successful, your database has been created`,
-                                                            metadata: metadata
-                                                        });
-                                                    }else{
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 201,
-                                                            msg: `warning status detected. Check Warning Message`,
-                                                            affected : rows.affectedRows,
-                                                            warning : rows.warningStatus,
-                                                            metadata: metadata
-                                                        })
-                                                    }
-
-                                                }).catch(async (e) => {
+                                            let mIfNotExistDB = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
+                                            if (rows.warningStatus < 1 || mIfNotExistDB) {
+                                                await resolve(<T>{
+                                                    status: true,
+                                                    code: 200,
+                                                    msg: `successful, your database has been created`,
+                                                    metadata: metadata
+                                                });
+                                                await PoolConnection.release();
+                                            }else{
                                                 await rejected({
                                                     status: false,
-                                                    code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata,
-                                                    error : e
+                                                    code: 201,
+                                                    msg: `warning status detected. Check Warning Message`,
+                                                    affected : rows.affectedRows,
+                                                    warning : rows.warningStatus,
+                                                    metadata: metadata
                                                 });
-                                            });
+                                                await PoolConnection.release();
+                                            }
+
                                             break;
                                         case "CREATE_TABLE" :
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    let mIfNotExist = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
-                                                    if (rows.warningStatus < 1 || mIfNotExist) {
-                                                        await resolve(<T>{
-                                                            status: true,
-                                                            code: 200,
-                                                            msg: `successful, your table has been created`,
-                                                            metadata: metadata
-                                                        });
-                                                    }else{
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 201,
-                                                            msg: `warning status detected. Check Warning Message`,
-                                                            affected : rows.affectedRows,
-                                                            warning : rows.warningStatus,
-                                                            metadata: metadata
-                                                        })
-                                                    }
-
-                                                }).catch(async (e) => {
+                                            let mIfNotExist = (ExtendsOptions !== undefined && ExtendsOptions.ifNotExist) ? ExtendsOptions.ifNotExist : false;
+                                            if (rows.warningStatus < 1 || mIfNotExist) {
+                                                await resolve(<T>{
+                                                    status: true,
+                                                    code: 200,
+                                                    msg: `successful, your table has been created`,
+                                                    metadata: metadata
+                                                });
+                                                await PoolConnection.release();
+                                            }else{
                                                 await rejected({
                                                     status: false,
-                                                    code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata,
-                                                    error : e
+                                                    code: 201,
+                                                    msg: `warning status detected. Check Warning Message`,
+                                                    affected : rows.affectedRows,
+                                                    warning : rows.warningStatus,
+                                                    metadata: metadata
                                                 });
-                                            });
+                                                await PoolConnection.release();
+                                            }
+
                                             break;
                                         case "INSERT":
                                             if (rows.affectedRows > 0) {
                                                 if (rows.warningStatus < 1) {
-                                                    PoolConnection.release()
-                                                        .then(async () => {
-                                                            metadata = merge(metadata, { lastInsertId : rows.insertId })
-                                                            await resolve(<T>{
-                                                                status: true,
-                                                                code: 200,
-                                                                msg: `successful, your data has been created`,
-                                                                metadata: metadata
-                                                            })
-                                                        }).catch(async () => {
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 500,
-                                                            msg: `Pool Connection Release Failed`,
-                                                            metadata: metadata
-                                                        });
-                                                    });
-                                                } else {
-                                                    PoolConnection.release()
-                                                        .then(async () => {
-                                                            await rejected({
-                                                                status: false,
-                                                                code: 201,
-                                                                msg: `warning status detected. Check Warning Message`,
-                                                                metadata: metadata
-                                                            });
-                                                        }).catch(async () => {
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 500,
-                                                            msg: `Pool Connection Release Failed`,
-                                                            metadata: metadata
-                                                        });
-                                                    });
-                                                }
-                                            } else {
-                                                PoolConnection.release()
-                                                    .then(async () => {
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 404,
-                                                            msg: `Succeeded, But No Data Changed Created`,
-                                                            metadata: metadata
-                                                        });
-                                                    }).catch(async () => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 500,
-                                                        msg: `Pool Connection Release Failed`,
+                                                    metadata = await merge(metadata, { lastInsertId : rows.insertId });
+                                                    await resolve(<T>{
+                                                        status: true,
+                                                        code: 200,
+                                                        msg: `successful, your data has been created`,
                                                         metadata: metadata
                                                     });
+                                                    await PoolConnection.release();
+                                                } else {
+                                                    await rejected({
+                                                        status: false,
+                                                        code: 201,
+                                                        msg: `warning status detected. Check Warning Message`,
+                                                        metadata: metadata
+                                                    });
+                                                    await PoolConnection.release();
+                                                }
+                                            } else {
+                                                await rejected({
+                                                    status: false,
+                                                    code: 404,
+                                                    msg: `Succeeded, But No Data Changed Created`,
+                                                    metadata: metadata
                                                 });
+                                                await PoolConnection.release();
                                             }
                                             break;
                                         case "READ":
                                             if (rows.length > 0) {
-                                                PoolConnection.release()
-                                                    .then(async () => {
-                                                        if (ExtendsOptions?.encryption !== undefined){
-                                                            if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
-                                                                let mEncryption = require("@dkaframework/encryption").default;
-                                                                let mEncryptInst = await new mEncryption(ExtendsOptions.encryption);
-                                                                let mFinalRows : any[] = [];
-                                                                await rows.map(async (data : any) =>{
-                                                                    let mJSONData : any = {};
-                                                                    await Object.keys(data).forEach( function (key) {
-                                                                        let mKey = (ExtendsOptions.settings?.coloumn) ?
-                                                                            mEncryptInst.decodeIvSync(key) : key;
-                                                                        let mVal = (ExtendsOptions.settings?.rows && typeof data[key] !== "number") ?
-                                                                            mEncryptInst.decodeIvSync(data[key]) : data[key];
-                                                                        mJSONData[mKey] = mVal;
-                                                                    });
-                                                                    mFinalRows.push(mJSONData);
-                                                                });
-
-                                                                await resolve(<T>{
-                                                                    status: true,
-                                                                    code: 200,
-                                                                    msg: `successful, your data has been read`,
-                                                                    data: mFinalRows,
-                                                                    metadata: metadata
-                                                                });
-                                                            }else{
-                                                                return { status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `};
-                                                            }
-                                                        }else{
-                                                            await resolve(<T>{
-                                                                status: true,
-                                                                code: 200,
-                                                                msg: `successful, your data has been read`,
-                                                                data: rows,
-                                                                metadata: metadata
+                                                if (ExtendsOptions?.encryption !== undefined){
+                                                    if (MariaDB.checkModuleExist("@dkaframework/encryption")) {
+                                                        let mEncryption = require("@dkaframework/encryption").default;
+                                                        let mEncryptInst = await new mEncryption(ExtendsOptions.encryption);
+                                                        let mFinalRows : any[] = [];
+                                                        await rows.map(async (data : any) =>{
+                                                            let mJSONData : any = {};
+                                                            await Object.keys(data).forEach( function (key) {
+                                                                let mKey = (ExtendsOptions.settings?.coloumn) ?
+                                                                    mEncryptInst.decodeIvSync(key) : key;
+                                                                let mVal = (ExtendsOptions.settings?.rows && typeof data[key] !== "number") ?
+                                                                    mEncryptInst.decodeIvSync(data[key]) : data[key];
+                                                                mJSONData[mKey] = mVal;
                                                             });
-                                                        }
-
-                                                    }).catch(async (error) => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 500,
-                                                        msg: `Pool Connection Release Failed`,
-                                                        metadata: metadata,
-                                                        error : error
-                                                    });
-                                                })
-
-                                            } else {
-                                                PoolConnection.release()
-                                                    .then(async () => {
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 404,
-                                                            msg: `Succeeded, But No Data Found`,
+                                                            mFinalRows.push(mJSONData);
+                                                        });
+                                                        await resolve(<T>{
+                                                            status: true,
+                                                            code: 200,
+                                                            msg: `successful, your data has been read`,
+                                                            data: mFinalRows,
                                                             metadata: metadata
                                                         });
-                                                    }).catch(async () => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 500,
-                                                        msg: `Pool Connection Release Failed`,
+                                                        await PoolConnection.release();
+                                                    }else{
+                                                        await rejected({ status : false, code : 500, msg : `Encryption Module is Declare. but module not installed, please installed first "@dkaframework/encryption" `});
+                                                        await PoolConnection.release();
+                                                    }
+                                                }else{
+                                                    await resolve(<T>{
+                                                        status: true,
+                                                        code: 200,
+                                                        msg: `successful, your data has been read`,
+                                                        data: rows,
                                                         metadata: metadata
                                                     });
-                                                })
+                                                    await PoolConnection.release();
+                                                }
+
+                                            } else {
+                                                await rejected({
+                                                    status: false,
+                                                    code: 404,
+                                                    msg: `Succeeded, But No Data Found`,
+                                                    metadata: metadata
+                                                });
+                                                await PoolConnection.release();
                                             }
                                             break;
                                         case "UPDATE" :
@@ -836,7 +786,7 @@ class MariaDB implements ClassInterfaces {
                                                         warning : rows.warningStatus,
                                                         metadata: metadata
                                                     });
-                                                    //resolve({status : true, code : 200, msg : `success`, da})
+                                                    await PoolConnection.release();
                                                 } else {
                                                     await rejected({
                                                         status: false,
@@ -845,7 +795,8 @@ class MariaDB implements ClassInterfaces {
                                                         affected : rows.affectedRows,
                                                         warning : rows.warningStatus,
                                                         metadata: metadata
-                                                    })
+                                                    });
+                                                    await PoolConnection.release();
                                                 }
                                             } else {
                                                 await rejected({
@@ -854,6 +805,7 @@ class MariaDB implements ClassInterfaces {
                                                     msg: `Succeeded, But No Data Changed`,
                                                     metadata: metadata
                                                 });
+                                                await PoolConnection.release();
                                             }
                                             break;
                                         case "DELETE" :
@@ -867,7 +819,7 @@ class MariaDB implements ClassInterfaces {
                                                         warning : rows.warningStatus,
                                                         metadata: metadata
                                                     });
-                                                    //resolve({status : true, code : 200, msg : `success`, da})
+                                                    await PoolConnection.release();
                                                 } else {
                                                     await rejected({
                                                         status: false,
@@ -876,7 +828,8 @@ class MariaDB implements ClassInterfaces {
                                                         affected : rows.affectedRows,
                                                         warning : rows.warningStatus,
                                                         metadata: metadata
-                                                    })
+                                                    });
+                                                    await PoolConnection.release();
                                                 }
                                             } else {
                                                 await rejected({
@@ -885,26 +838,18 @@ class MariaDB implements ClassInterfaces {
                                                     msg: `Succeeded, But No Data Changed`,
                                                     metadata: metadata
                                                 });
+                                                await PoolConnection.release();
                                             }
                                             break;
                                         default:
                                             this.timeStart = new Date().getTime();
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 505,
-                                                        msg: `Method Unknown`,
-                                                        metadata: metadata
-                                                    });
-                                                }).catch(async () => {
-                                                await rejected({
-                                                    status: false,
-                                                    code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata
-                                                });
-                                            })
+                                            await rejected({
+                                                status: false,
+                                                code: 505,
+                                                msg: `Method Unknown`,
+                                                metadata: metadata
+                                            });
+                                            await PoolConnection.release();
                                             break;
                                     }
 
@@ -912,95 +857,74 @@ class MariaDB implements ClassInterfaces {
                                 .catch(async (error) => {
                                     let timeEnd = new Date().getTime();
                                     let metadata: metadata = {
-                                        activeConnections: mInstance.activeConnections(),
-                                        idleConnections: mInstance.idleConnections(),
-                                        totalConnections: mInstance.totalConnections(),
+                                        activeConnections: mInstancePool.activeConnections(),
+                                        idleConnections: mInstancePool.idleConnections(),
+                                        totalConnections: mInstancePool.totalConnections(),
                                         sqlRaw: SQLString,
                                         timeExecuteinMilliSecond: Math.round(timeEnd - this.timeStart),
                                         timeExecuteinSecond: ((timeEnd - this.timeStart) / 1000)
                                     }
                                     switch (error.code) {
                                         case 'ER_TABLE_EXISTS_ERROR' :
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 500,
-                                                        msg: "Failed, Table Name Is Exists",
-                                                        error: {
-                                                            errorMsg: error.text,
-                                                            errorCode: error.code,
-                                                            errNo: error.errno
-                                                        }
-                                                    });
-                                                }).catch(async () => {
-                                                await rejected({
-                                                    status: false,
-                                                    code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata
-                                                });
+                                            await rejected({
+                                                status: false,
+                                                code: 500,
+                                                msg: "Failed, Table Name Is Exists",
+                                                metadata : metadata,
+                                                error: {
+                                                    errorMsg: error.text,
+                                                    errorCode: error.code,
+                                                    errNo: error.errno
+                                                }
                                             });
+                                            await PoolConnection.release();
                                             break;
                                         case "ER_NO_SUCH_TABLE" :
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    if (ExtendsOptions?.encryption !== undefined){
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 500,
-                                                            msg: "Error Detected, cannot find encryption variable table name",
-                                                            error: {
-                                                                errorMsg: error.text,
-                                                                errorCode: error.code,
-                                                                errNo: error.errno
-                                                            }
-                                                        });
-                                                    }else{
-                                                        await rejected({
-                                                            status: false,
-                                                            code: 500,
-                                                            msg: "Error Detected",
-                                                            error: {
-                                                                errorMsg: error.text,
-                                                                errorCode: error.code,
-                                                                errNo: error.errno
-                                                            }
-                                                        });
-                                                    }
-                                                }).catch(async () => {
+                                            if (ExtendsOptions?.encryption !== undefined){
                                                 await rejected({
                                                     status: false,
                                                     code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata
+                                                    msg: "Error Detected, cannot find encryption variable table name",
+                                                    metadata : metadata,
+                                                    error: {
+                                                        errorMsg: error.text,
+                                                        errorCode: error.code,
+                                                        errNo: error.errno
+                                                    }
                                                 });
-                                            });
+                                            }else{
+                                                await rejected({
+                                                    status: false,
+                                                    code: 500,
+                                                    msg: "Error Detected",
+                                                    metadata : metadata,
+                                                    error: {
+                                                        errorMsg: error.text,
+                                                        errorCode: error.code,
+                                                        errNo: error.errno
+                                                    }
+                                                });
+                                            }
+                                            await PoolConnection.release();
                                             break;
                                         default :
-                                            PoolConnection.release()
-                                                .then(async () => {
-                                                    await rejected({
-                                                        status: false,
-                                                        code: 500,
-                                                        msg: "Error Detected",
-                                                        error: {
-                                                            errorMsg: error.text,
-                                                            errorCode: error.code,
-                                                            errNo: error.errno
-                                                        }
-                                                    });
-                                                }).catch(async () => {
-                                                await rejected({
-                                                    status: false,
-                                                    code: 500,
-                                                    msg: `Pool Connection Release Failed`,
-                                                    metadata: metadata
-                                                });
+                                            await rejected({
+                                                status: false,
+                                                code: 500,
+                                                msg: "Error Detected",
+                                                metadata : metadata,
+                                                error: {
+                                                    errorMsg: error.text,
+                                                    errorCode: error.code,
+                                                    errNo: error.errno
+                                                }
                                             });
+                                            await PoolConnection.release();
                                     }
                                 });
-                        }).catch(async (error) => {
+                            //End After Get Connection
+                        })
+                        .catch(async (error) => {
                             switch (error.code) {
                                 case "ER_GET_CONNECTION_TIMEOUT" :
                                     await rejected({
