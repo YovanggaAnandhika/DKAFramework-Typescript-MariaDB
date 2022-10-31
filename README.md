@@ -1,6 +1,8 @@
 <h1 style="text-align:center">DKA MARIADB MODULE</h1>
 <p style="text-align:center">this is a part module componen from or to DKAFramework</p>
 <br>
+# DEPRECATED
+project Move To [@dkaframework/database](https://github.com/YovanggaAnandhika/DKAFramework-Typescript-MariaDB)
 
 ## Status
 
